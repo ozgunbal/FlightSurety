@@ -1,7 +1,7 @@
-import FlightSuretyApp from '../../build/contracts/FlightSuretyApp.json';
-import Config from './config.json';
-import Web3 from 'web3';
-import express from 'express';
+const FlightSuretyApp = require('../../build/contracts/FlightSuretyApp.json');
+const Config = require('./config.json');
+const Web3 = require('web3');
+const express = require('express');
 
 
 let config = Config['localhost'];
@@ -24,6 +24,6 @@ app.get('/api', (req, res) => {
     })
 })
 
-export default app;
+module.exports = app
 
 

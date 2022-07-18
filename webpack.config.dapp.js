@@ -1,8 +1,9 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 
 module.exports = {
-  entry: ['babel-polyfill', path.join(__dirname, "src/dapp")],
+  entry: path.join(__dirname, "src/dapp", "index.js"),
   output: {
     path: path.join(__dirname, "prod/dapp"),
     filename: "bundle.js"
@@ -19,10 +20,8 @@ module.exports = {
         use: ["style-loader", "css-loader"]
       },
       {
-        test: /\.(png|svg|jpg|gif)$/,
-        use: [
-          'file-loader'
-        ]
+        test: /\.(jpg|png|svg|gif)$/,
+        type: 'asset/resource',
       },
       {
         test: /\.html$/,
@@ -32,16 +31,18 @@ module.exports = {
     ]
   },
   plugins: [
-    new HtmlWebpackPlugin({ 
-      template: path.join(__dirname, "src/dapp/index.html")
-    })
+    new NodePolyfillPlugin(),
+    new HtmlWebpackPlugin({
+      title: 'webpack Boilerplate',
+      template: path.resolve(__dirname, './src/dapp/index.html'), // template file
+      filename: 'index.html', // output file
+      static: {
+        directory: path.join(__dirname, './src/dapp'),
+      },
+    }),
   ],
   resolve: {
-    extensions: [".js"]
+    extensions: [".js"],
+    fallback: { "https": false }
   },
-  devServer: {
-    contentBase: path.join(__dirname, "dapp"),
-    port: 8000,
-    stats: "minimal"
-  }
 };

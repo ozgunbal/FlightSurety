@@ -3,6 +3,23 @@ import DOM from './dom';
 import Contract from './contract';
 import './flightsurety.css';
 
+const getStatus = (statusCode) => {
+    switch(statusCode) {
+        case '10':
+            return 'On Time';
+        case '20':
+            return 'Late Airline';
+        case '30':
+            return 'Late Weather';
+        case '40':
+            return 'Late Technical';
+        case '50':
+            return 'Late Other';
+        case '0':
+        default:
+            return 'Unknown';
+    }
+}
 
 (async() => {
 
@@ -25,8 +42,13 @@ import './flightsurety.css';
                 display('Oracles', 'Trigger oracles', [ { label: 'Fetch Flight Status', error: error, value: result.flight + ' ' + result.timestamp} ]);
             });
         })
+
+        contract.listenFlightInfo(({ airline, flight, status, timestamp }) => {
+            display('Oracles', 'FligtStatusInfo Event', [ { label: 'Fligt Status Info', value: `Status of ${flight} flight of ${airline} airline at ${timestamp} is ${getStatus(status)}`} ]);
+        });
     
     });
+    window.contract = contract;
     
 
 })();

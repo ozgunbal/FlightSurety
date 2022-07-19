@@ -6,7 +6,7 @@ export default class Contract {
     constructor(network, callback) {
 
         let config = Config[network];
-        this.web3 = new Web3(new Web3.providers.HttpProvider(config.url));
+        this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.url));
         this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
         this.initialize(callback);
         this.owner = null;
@@ -31,6 +31,8 @@ export default class Contract {
 
             callback();
         });
+
+        // Register flights by calling the contract
     }
 
     isOperational(callback) {
@@ -52,5 +54,13 @@ export default class Contract {
             .send({ from: self.owner}, (error, result) => {
                 callback(error, payload);
             });
+    }
+
+    listenFlightInfo(callback) {
+        let self = this;
+        self.flightSuretyApp.events.FlightStatusInfo({ fromBlock: 0 }, function (error, event) {
+            if (error) console.log('ERROR: ' , error);
+            callback(event.returnValues);
+        })
     }
 }

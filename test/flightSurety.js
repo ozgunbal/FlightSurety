@@ -121,7 +121,6 @@ contract('Flight Surety Tests', async (accounts) => {
     
     // ARRANGE
     const secondAirline = accounts[2];
-    const thirdAirline = accounts[3];
     const fifthAirline = accounts[5];
 
     // ACT

@@ -16,9 +16,14 @@ contract FlightSuretyData {
     
     struct AirlineProfile {
         bool isRegistered;
+        bool canParticipate;
+        address airlineAddress;
+        uint fundAmount;
     }
 
     mapping(address => AirlineProfile) private airlines;
+    uint private airlineCount = 0;
+
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
@@ -145,15 +150,29 @@ contract FlightSuretyData {
     */   
     function registerAirline
                             (   
+                                address _airlineAddress
                             )
                             external
                             requireIsOperational
                             requireCallerAuthorized
     {
+        AirlineProfile memory airline;
+        airline.isRegistered = true;
+        airline.airlineAddress = _airlineAddress;
+        airlines[_airlineAddress] = airline;
+        airlineCount = airlineCount + 1;
     }
 
-    function isAirline (address _airlineAddress) external view returns (bool) {
+    function isAirlineRegistered (address _airlineAddress) external view returns (bool) {
         return airlines[_airlineAddress].isRegistered;
+    }
+
+    function isAirlineCanParticipate (address _airlineAddress) external view returns (bool) {
+        return airlines[_airlineAddress].canParticipate;
+    }
+
+    function getAirlineCount () external view returns (uint256) {
+        return airlineCount;
     }
 
 
@@ -207,6 +226,10 @@ contract FlightSuretyData {
                             payable
                             requireIsOperational
     {
+        require(airlines[msg.sender].isRegistered, 'Caller cannot fund, if it is not a registered airline');
+        require(msg.value == 10 ether);
+        airlines[msg.sender].fundAmount = msg.value;
+        airlines[msg.sender].canParticipate = true;
     }
 
     function getFlightKey

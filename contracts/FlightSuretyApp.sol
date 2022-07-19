@@ -26,7 +26,10 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
 
+    uint256 private constant ACCEPTABLE_VOTE_PERCENTAGE = 50;
+
     address private contractOwner;          // Account used to deploy contract
+    FlightSuretyData fligtSuretyData;       // Data contract instance
 
     struct Flight {
         bool isRegistered;
@@ -36,7 +39,14 @@ contract FlightSuretyApp {
     }
     mapping(bytes32 => Flight) private flights;
 
- 
+    
+    struct Votes {
+        uint256 voteCount;
+        mapping(address => uint8) voters;
+    }
+    mapping(address => Votes) private airlineVotes;
+
+
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
@@ -65,6 +75,23 @@ contract FlightSuretyApp {
         _;
     }
 
+    /**
+    * @dev Modifier that requires that the sender airline is registered
+    */
+    modifier requireRegisteredAirline() {
+        require(fligtSuretyData.isAirlineRegistered(msg.sender), "Caller is not registered airline");
+        _;
+    }
+
+    /**
+    * @dev Modifier that requires that the sender airline can participate or the sender is contract owner for only to add first airline
+    */
+    modifier requireCanRegisterAirline() {
+        uint airlineCount = fligtSuretyData.getAirlineCount();
+        require(fligtSuretyData.isAirlineCanParticipate(msg.sender) || ((msg.sender == contractOwner) && (airlineCount == 0)), 'Caller should be registered airline or contract owner for first registration');
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -75,8 +102,10 @@ contract FlightSuretyApp {
     */
     constructor
                                 (
+                                    address dataContract
                                 ) 
     {
+        fligtSuretyData = FlightSuretyData(dataContract);
         contractOwner = msg.sender;
     }
 
@@ -102,13 +131,43 @@ contract FlightSuretyApp {
     *
     */   
     function registerAirline
-                            (   
+                            (
+                                address _airlineAddress   
                             )
                             external
-                            pure
+                            requireCanRegisterAirline
                             returns(bool success, uint256 votes)
     {
-        return (success, 0);
+        uint airlineCount = fligtSuretyData.getAirlineCount();
+        if (airlineCount < 4) {
+            fligtSuretyData.registerAirline(_airlineAddress);
+            return (true, 0);
+        } else {
+            return _voteAirline(_airlineAddress);
+        }
+    }
+
+    /**
+    * @dev Vote an airline for registration
+    *
+    */
+    function _voteAirline (address _airlineAddress) private requireRegisteredAirline returns(bool success, uint256 votes) {
+        require(airlineVotes[_airlineAddress].voters[msg.sender] == 0, 'Caller already voted for this airline');
+        
+        airlineVotes[_airlineAddress].voteCount += 1;
+        airlineVotes[_airlineAddress].voters[msg.sender] = 1;
+        
+        uint256 voteCount = airlineVotes[_airlineAddress].voteCount;
+        uint airlineCount = fligtSuretyData.getAirlineCount();
+        uint256 percentage = (voteCount.mul(100)).div(airlineCount);
+        bool hasEnoughVote = percentage >= ACCEPTABLE_VOTE_PERCENTAGE;
+
+        if (hasEnoughVote) {
+            fligtSuretyData.registerAirline(_airlineAddress);
+            return (true, voteCount);
+        } else {
+            return (false, voteCount);
+        }
     }
 
 
@@ -139,6 +198,7 @@ contract FlightSuretyApp {
                                 internal
                                 pure
     {
+        // If statusCode 20 call pay method from data contract
     }
 
 
@@ -336,3 +396,10 @@ contract FlightSuretyApp {
 // endregion
 
 }   
+
+interface FlightSuretyData {
+    function registerAirline(address airlineAddress) external;
+    function isAirlineRegistered(address airlineAddress) external returns (bool);
+    function isAirlineCanParticipate(address airlineAddress) external returns (bool);
+    function getAirlineCount () external view returns (uint256);
+}

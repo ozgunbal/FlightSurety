@@ -59,7 +59,7 @@ contract('Flight Surety Tests', async (accounts) => {
       let reverted = false;
       try 
       {
-          await config.flightSurety.setTestingMode(true);
+          await config.flightSuretyData.registerAirline(config.firstAirline, {from: config.flightSuretyData.address})
       }
       catch(e) {
           reverted = true;
@@ -71,7 +71,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
   });
 
-  it('(airline) cannot register an Airline using registerAirline() if it is not funded', async () => {
+  it('(airline) cannot participate, if it is not funded', async () => {
     
     // ARRANGE
     let newAirline = accounts[2];
@@ -83,11 +83,64 @@ contract('Flight Surety Tests', async (accounts) => {
     catch(e) {
 
     }
-    let result = await config.flightSuretyData.isAirline.call(newAirline); 
+    let result = await config.flightSuretyData.isAirlineCanParticipate.call(newAirline); 
 
     // ASSERT
     assert.equal(result, false, "Airline should not be able to register another airline if it hasn't provided funding");
 
+  });
+
+  it('(airline) can register an Airline using registerAirline() up to 4 airlines', async () => {
+    
+    // ARRANGE
+    const secondAirline = accounts[2];
+    const thirdAirline = accounts[3];
+    const forthAirline = accounts[4];
+
+    // ACT
+    
+    await config.flightSuretyApp.registerAirline(config.firstAirline, {from: config.owner});
+    await config.flightSuretyData.fund({from: config.firstAirline, value: 10 * config.weiMultiple})
+    await config.flightSuretyApp.registerAirline(secondAirline, {from: config.firstAirline});
+    await config.flightSuretyApp.registerAirline(thirdAirline, {from: config.firstAirline});
+    await config.flightSuretyApp.registerAirline(forthAirline, {from: config.firstAirline});
+
+    const resultOne = await config.flightSuretyData.isAirlineRegistered.call(config.firstAirline);
+    const resultTwo = await config.flightSuretyData.isAirlineRegistered.call(secondAirline); 
+    const resultThree = await config.flightSuretyData.isAirlineRegistered.call(thirdAirline);
+    const resultFour = await config.flightSuretyData.isAirlineRegistered.call(forthAirline);
+
+    // ASSERT
+    assert.equal(resultOne, true, "Airline should not be able to register another airline if it's not registered by owner");
+    assert.equal(resultTwo, true, "Airline should not be able to register another airline if it's not registered by another registered airline");
+    assert.equal(resultThree, true, "Airline should not be able to register another airline if it's not registered by another registered airline");
+    assert.equal(resultFour, true, "Airline should not be able to register another airline if it's not registered by another registered airline");
+  });
+
+  it('(airline) can register an Airline using registerAirline() after 4 airlines in total with votes', async () => {
+    
+    // ARRANGE
+    const secondAirline = accounts[2];
+    const thirdAirline = accounts[3];
+    const fifthAirline = accounts[5];
+
+    // ACT
+    await config.flightSuretyApp.registerAirline(fifthAirline, {from: config.firstAirline});
+
+    const resultOne = await config.flightSuretyData.isAirlineRegistered.call(fifthAirline);
+
+    // ASSERT
+    assert.equal(resultOne, false, "Airline should not be able to register another airline if it has enough votes from other airlines");
+    
+    // ACT
+    // secondAirline first add funds to be able to call registerAirline()
+    // then add another vote to fifthAirline and its vote would be 2/4 then it's registered
+    await config.flightSuretyData.fund({from: secondAirline, value: 10 * config.weiMultiple });
+    await config.flightSuretyApp.registerAirline(fifthAirline, {from: secondAirline});
+    const resultTwo = await config.flightSuretyData.isAirlineRegistered.call(fifthAirline);
+
+    // ASSERT
+    assert.equal(resultTwo, true, "Airline should not be able to register another airline if it has enough votes from other airlines");
   });
  
 

@@ -71,6 +71,10 @@ contract('Flight Surety Tests', async (accounts) => {
 
   });
 
+  /****************************************************************************************/
+  /* Airlines                                                                             */
+  /****************************************************************************************/
+
   it('(airline) cannot participate, if it is not funded', async () => {
     
     // ARRANGE
@@ -142,5 +146,23 @@ contract('Flight Surety Tests', async (accounts) => {
     assert.equal(resultTwo, true, "Airline should not be able to register another airline if it has enough votes from other airlines");
   });
  
+  it('(passenger) can buy an insurance and can withdraw credit', async () => {
+    
+    // ARRANGE
+    let flight = 'ND1309'; // Course number
+    let timestamp = Math.floor(Date.now() / 1000);
+
+    // ACT
+    // For test purposes only
+    await config.flightSuretyData.authorizeCaller(config.owner, {from: config.owner});
+
+    const flightKey = await config.flightSuretyData.testOnlyGetFlightKey(config.firstAirline, flight, timestamp);
+    await config.flightSuretyData.buy(config.owner, config.firstAirline, flightKey, {from: config.owner, value: 1 * config.weiMultiple });
+
+    await config.flightSuretyData.pay(flightKey, config.firstAirline, 150, {from: config.owner});
+
+    // console.log('Withdrawable: ', result.toNumber());
+    await config.flightSuretyApp.creditInsurees({from: config.owner});
+  });
 
 });

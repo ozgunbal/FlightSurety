@@ -21,10 +21,24 @@
 
     <main class="container">
 
+        <div class="row top-20">
+            <label class="form">Register Flight Insurance</label>
+            <select name="airlines" id="airline-select"></select>
+            <select name="flight" id="flight-select"></select>
+            <select name="timestamp" id="timestamp-select"></select>
+            <input type="text" id="insurance-amount">
+            <btn class="btn btn-primary" id="submit-insurance">Submit Insurance</btn>
+        </div>
+        <div class="row top-20">
+            <btn class="btn btn-primary" id="withdraw-insurance">Withdraw Insurance</btn>
+        </div>
         <div id="display-wrapper" class="top-20">
         </div>
         <div class="row top-20">
-            <label class="form">Flight</label> <input type="text" id="flight-number"> <btn class="btn btn-primary" id="submit-oracle">Submit to Oracles</btn>
+            <select name="airlines-oracle" id="airline-oracle-select"></select>
+            <select name="flight-oracle" id="flight-oracle-select"></select>
+            <select name="timestamp-oracle" id="timestamp-oracle-select"></select>
+            <btn class="btn btn-primary" id="submit-oracle">Submit to Oracles</btn>
         </div>
     </main>
 

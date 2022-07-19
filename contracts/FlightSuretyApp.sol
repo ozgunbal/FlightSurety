@@ -28,8 +28,10 @@ contract FlightSuretyApp {
 
     uint256 private constant ACCEPTABLE_VOTE_PERCENTAGE = 50;
 
+    uint256 private constant INSURANCE_MULTIPLIER = 150; // This will be divided to 100 during computation
+
     address private contractOwner;          // Account used to deploy contract
-    FlightSuretyData fligtSuretyData;       // Data contract instance
+    IFlightSuretyData fligtSuretyData;       // Data contract instance
 
     struct Flight {
         bool isRegistered;
@@ -105,7 +107,7 @@ contract FlightSuretyApp {
                                     address dataContract
                                 ) 
     {
-        fligtSuretyData = FlightSuretyData(dataContract);
+        fligtSuretyData = IFlightSuretyData(dataContract);
         contractOwner = msg.sender;
     }
 
@@ -177,11 +179,26 @@ contract FlightSuretyApp {
     */  
     function registerFlight
                                 (
+                                    address airline,
+                                    string memory flight,
+                                    uint256 timestamp
                                 )
                                 external
-                                pure
+                                payable
     {
+        require(msg.value <= 1 ether, 'Flight insurance should be less than or equal to 1 ether');
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        Flight memory newFlight;
+        newFlight.isRegistered = true;
+        newFlight.updatedTimestamp = timestamp;
+        newFlight.airline = airline;
+        flights[flightKey] = newFlight;
 
+        fligtSuretyData.buy{value: msg.value}(msg.sender, airline, flightKey);
+    }
+
+    function creditInsurees () external {
+        fligtSuretyData.creditInsurees(msg.sender);
     }
     
    /**
@@ -196,9 +213,19 @@ contract FlightSuretyApp {
                                     uint8 statusCode
                                 )
                                 internal
-                                pure
     {
-        // If statusCode 20 call pay method from data contract
+        
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        bool hasStatus = flights[flightKey].airline == airline && flights[flightKey].updatedTimestamp == timestamp && flights[flightKey].statusCode == statusCode;
+        if (!hasStatus) {
+            flights[flightKey].updatedTimestamp = timestamp;
+            flights[flightKey].statusCode = statusCode;
+            flights[flightKey].airline = airline;
+
+            if (statusCode == STATUS_CODE_LATE_AIRLINE) {
+                fligtSuretyData.pay(flightKey, airline, INSURANCE_MULTIPLIER);
+            }
+        }
     }
 
 
@@ -400,9 +427,12 @@ contract FlightSuretyApp {
 
 }   
 
-interface FlightSuretyData {
+interface IFlightSuretyData {
     function registerAirline(address airlineAddress) external;
     function isAirlineRegistered(address airlineAddress) external returns (bool);
     function isAirlineCanParticipate(address airlineAddress) external returns (bool);
     function getAirlineCount () external view returns (uint256);
+    function buy (address insuree, address airline, bytes32 flightKey) external payable;
+    function pay (bytes32 flightKey, address airline, uint256 multiplier) external;
+    function creditInsurees (address insuree) external;
 }

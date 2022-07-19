@@ -45,8 +45,11 @@ flightSuretyApp.events.OracleRequest({
     const filteredOracles = registeredOracles.filter(oracle => {
       return oracle.indexes[0] === index || oracle.indexes[1] === index || oracle.indexes[2] === index
     });
+    console.log(`Submit response from ${filteredOracles.length} oracles with the index ${index}`);
     const statusCode = Math.floor(Math.random() * 6) * 10;
-    filteredOracles.forEach(oracle => {
+    
+    // Send only 3 response due to failure of excessive response submitting
+    filteredOracles.slice(0, 3).forEach((oracle, idx) => {
       flightSuretyApp.methods.submitOracleResponse(index, airline, flight, timestamp, statusCode).send({ from: oracle.oracleAddress });
     })
 });

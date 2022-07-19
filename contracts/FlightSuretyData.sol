@@ -24,6 +24,20 @@ contract FlightSuretyData {
     mapping(address => AirlineProfile) private airlines;
     uint private airlineCount = 0;
 
+    struct InsureesInsurance {
+        uint initialAmount;
+        address insureeAddress;
+    }
+
+    struct FlightInsurance {
+        address airlineAddress;
+        InsureesInsurance[] insurees;
+        uint insureeCount;    
+    }
+
+    mapping(bytes32 => FlightInsurance) private flightInsurances;
+    mapping(address => uint) private withdrawableInsurances;
+
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
@@ -181,24 +195,51 @@ contract FlightSuretyData {
     *
     */   
     function buy
-                            (                             
+                            (     
+                                address insuree,
+                                address airline,
+                                bytes32 flightKey                        
                             )
                             external
                             payable
                             requireIsOperational
+                            requireCallerAuthorized
     {
+        if (flightInsurances[flightKey].insureeCount == 0) {
+            flightInsurances[flightKey].airlineAddress = airline;
+            flightInsurances[flightKey].insureeCount += 1;
+            flightInsurances[flightKey].insurees.push(
+                InsureesInsurance({
+                    insureeAddress: insuree,
+                    initialAmount: msg.value
+                })
+            );
+        } else {
+            flightInsurances[flightKey].insureeCount += 1;
+            flightInsurances[flightKey].insurees.push(
+                InsureesInsurance({
+                    insureeAddress: insuree,
+                    initialAmount: msg.value
+                })
+            );
+        }
 
+        airlines[airline].fundAmount += msg.value;
     }
 
     /**
      *  @dev Credits payouts to insurees
     */
     function creditInsurees
-                                (
-                                )
+                                (address insuree)
                                 external
                                 requireIsOperational
+                                requireCallerAuthorized
     {
+        require(withdrawableInsurances[insuree] > 0, "There's nothing to withdraw");
+        uint amount = withdrawableInsurances[insuree];
+        delete withdrawableInsurances[insuree];
+        payable(insuree).transfer(amount);
     }
     
 
@@ -208,10 +249,21 @@ contract FlightSuretyData {
     */
     function pay
                             (
+                                bytes32 flightKey,
+                                address airline,
+                                uint256 multiplier
                             )
                             external
                             requireIsOperational
+                            requireCallerAuthorized
     {
+        FlightInsurance memory flightInsurance =  flightInsurances[flightKey];
+
+        for(uint i=0; i < flightInsurance.insureeCount; i++) {
+            uint withdrawAmount = (flightInsurance.insurees[i].initialAmount.mul(multiplier)).div(100);
+            airlines[airline].fundAmount -= withdrawAmount;
+            withdrawableInsurances[flightInsurance.insurees[i].insureeAddress] += withdrawAmount; 
+        }
     }
 
    /**
@@ -240,6 +292,19 @@ contract FlightSuretyData {
                         )
                         pure
                         internal
+                        returns(bytes32) 
+    {
+        return keccak256(abi.encodePacked(airline, flight, timestamp));
+    }
+
+    function testOnlyGetFlightKey(
+                            address airline,
+                            string memory flight,
+                            uint256 timestamp
+                        )
+                        public
+                        view
+                        requireCallerAuthorized
                         returns(bytes32) 
     {
         return keccak256(abi.encodePacked(airline, flight, timestamp));

@@ -2,6 +2,15 @@
 
 FlightSurety is a sample application project for Udacity's Blockchain course.
 
+## Changes from boilerplate:
+- Solidity version: 0.8.0
+- Truffle version: 5.5.13
+- Webpack is updated to latest
+- Server can be run only with node (no need to webpack)
+- At UI there are selects for airline, flight and timestamp (for both insurance and fetching status)
+- At UI, there's a withdraw button
+- For buy and withdrawal test in test suite, `testOnlyGetFlightKey` is added  to `FlightSuretyData` contract
+
 ## Install
 
 This repository contains Smart Contract code in Solidity (using Truffle), tests (also using Truffle), dApp scaffolding (using HTML, CSS and JS) and server app scaffolding.

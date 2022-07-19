@@ -12,7 +12,13 @@ contract FlightSuretyData {
 
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
+    mapping(address => uint256) private authorizedCallers;              // Authorized FlightSuretyApp contracts(callers)            
+    
+    struct AirlineProfile {
+        bool isRegistered;
+    }
 
+    mapping(address => AirlineProfile) private airlines;
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
@@ -56,6 +62,15 @@ contract FlightSuretyData {
         _;
     }
 
+    /**
+    * @dev Modifier that requires the Authorized caller account to be the function caller
+    */
+    modifier requireCallerAuthorized()
+    {
+        require(authorizedCallers[msg.sender] == 1, "Caller is not authorized");
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
@@ -89,6 +104,36 @@ contract FlightSuretyData {
         operational = mode;
     }
 
+    /**
+    * @dev Adds an authorized contract(caller)
+    *
+    * Enables to critical data manipulation can be only done by authorized callers
+    */
+    function authorizeCaller
+                            (
+                                address callerAddress
+                            )
+                            external
+                            requireContractOwner
+    {
+        authorizedCallers[callerAddress] = 1;
+    }
+
+    /**
+    * @dev Removes an authorized contract(caller)
+    *
+    * It might need when FlightSuretyApp changes and old contract should be deathorized
+    */
+    function deauthorizeCaller
+                            (
+                                address callerAddress
+                            )
+                            external
+                            requireContractOwner
+    {
+        delete authorizedCallers[callerAddress];
+    }
+
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -102,8 +147,13 @@ contract FlightSuretyData {
                             (   
                             )
                             external
-                            pure
+                            requireIsOperational
+                            requireCallerAuthorized
     {
+    }
+
+    function isAirline (address _airlineAddress) external view returns (bool) {
+        return airlines[_airlineAddress].isRegistered;
     }
 
 
@@ -116,6 +166,7 @@ contract FlightSuretyData {
                             )
                             external
                             payable
+                            requireIsOperational
     {
 
     }
@@ -127,7 +178,7 @@ contract FlightSuretyData {
                                 (
                                 )
                                 external
-                                pure
+                                requireIsOperational
     {
     }
     
@@ -140,7 +191,7 @@ contract FlightSuretyData {
                             (
                             )
                             external
-                            pure
+                            requireIsOperational
     {
     }
 
@@ -154,6 +205,7 @@ contract FlightSuretyData {
                             )
                             public
                             payable
+                            requireIsOperational
     {
     }
 
